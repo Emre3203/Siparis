@@ -497,6 +497,15 @@ function resetAll(){
 }
 
 // FİYAT KOPYALA
+function editPlPrice(pi){
+  const newPrice = prompt(products[pi].name + ' fiyatı:', products[pi].price);
+  if(newPrice===null) return;
+  const p = parseFloat(newPrice);
+  if(isNaN(p)||p<0){alert('Geçerli bir fiyat gir!');return;}
+  products[pi].price = p;
+  save();render();
+}
+
 function copyPrice(){
   let text='🥤 FİYAT LİSTESİ\n\n';
   products.forEach(p=>{if(p.price>0)text+='▪ '+pdn(p)+' — '+p.price+' €\n';});
@@ -721,10 +730,10 @@ function render(){
 
   // FİYAT
   if(activeTab==='price'){
-    document.getElementById('plItems').innerHTML=products.map(p=>`
+    document.getElementById('plItems').innerHTML=products.map((p,pi)=>`
       <div class="plitem">
         <div><span class="plname">${p.name}</span>${p.size?`<span class="plsize">${p.size}</span>`:''}</div>
-        <span class="plprice">${p.price>0?p.price+' €':'—'}</span>
+        <span class="plprice" onclick="editPlPrice(${pi})" style="cursor:pointer;" title="Fiyatı değiştirmek için dokun">${p.price>0?p.price+' €':'— €'}</span>
       </div>
     `).join('');
   }
