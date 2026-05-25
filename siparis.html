@@ -374,74 +374,7 @@ function bp(pi){return products[pi].buyPrice||0;}
 function icp(ci,pi){return customers[ci].prices&&customers[ci].prices[pi]!==undefined;}
 function ct(ci){return products.reduce((s,p,pi)=>s+sp(ci,pi)*customers[ci].counts[pi],0);}
 function cpr(ci){return products.reduce((s,p,pi)=>s+(sp(ci,pi)-bp(pi))*customers[ci].counts[pi],0);}
-// --- KAYDIRMA (SWIPE) İLE SEKME GEÇİŞİ SİSTEMİ ---
-let touchStartX = 0;
-let touchEndX = 0;
-let touchStartY = 0;
-let touchEndY = 0;
-let isSwipingOnTabBar = false;
 
-// Ekrana dokunulduğunda başlangıç koordinatlarını al
-document.addEventListener('touchstart', e => {
-  touchStartX = e.changedTouches[0].screenX;
-  touchStartY = e.changedTouches[0].screenY;
-  // Eğer kullanıcı üstteki sekme çubuğunu kaydırıyorsa, sayfa geçişini iptal etmek için bunu tespit et
-  isSwipingOnTabBar = e.target.closest('.tabs') !== null;
-}, {passive: true});
-
-// Ekrandan parmak kalktığında bitiş koordinatlarını al ve hesapla
-document.addEventListener('touchend', e => {
-  if (isSwipingOnTabBar) return; // Sekme menüsü kaydırılıyorsa işlem yapma
-  
-  touchEndX = e.changedTouches[0].screenX;
-  touchEndY = e.changedTouches[0].screenY;
-  handleSwipe();
-}, {passive: true});
-
-function handleSwipe() {
-  const minSwipeDistance = 50; // Kaydırmanın algılanması için gereken minimum piksel mesafesi
-  const maxVerticalDistance = 60; // Aşağı/yukarı kaydırırken yanlışlıkla sekme değişmesini önleyen dikey sınır
-
-  const diffX = touchEndX - touchStartX;
-  const diffY = touchEndY - touchStartY;
-
-  // Eğer yatay kaydırma yeterince uzunsa ve dikey sapma azsa işlemi onayla
-  if (Math.abs(diffX) > minSwipeDistance && Math.abs(diffY) < maxVerticalDistance) {
-    
-    // Uygulamadaki mevcut sekmelerin sırasını bir diziye (array) diziyoruz
-    const currentTabs = [];
-    customers.forEach((c, i) => { 
-      if (!c.delivered) currentTabs.push(i); // Sadece teslim edilmemiş müşterileri ekle
-    });
-    currentTabs.push('total', 'teslim', 'price', 'eksik', 'borc', 'ayar');
-
-    let currentIndex = currentTabs.indexOf(activeTab);
-    if (currentIndex === -1) return;
-
-    if (diffX < 0 && currentIndex < currentTabs.length - 1) {
-      // Sola kaydırıldı -> Sonraki sekmeye geç
-      const nextTab = currentTabs[currentIndex + 1];
-      typeof nextTab === 'number' ? showCust(nextTab) : showTab(nextTab);
-      scrollActiveTabIntoView();
-    } else if (diffX > 0 && currentIndex > 0) {
-      // Sağa kaydırıldı -> Önceki sekmeye geç
-      const prevTab = currentTabs[currentIndex - 1];
-      typeof prevTab === 'number' ? showCust(prevTab) : showTab(prevTab);
-      scrollActiveTabIntoView();
-    }
-  }
-}
-
-// Sekme değiştiğinde, üstteki yatay menüyü otomatik olarak yeni sekmeye doğru kaydırır
-function scrollActiveTabIntoView() {
-  setTimeout(() => {
-    const activeBtn = document.querySelector('.tab.active');
-    if(activeBtn) {
-      activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-    }
-  }, 50);
-}
-// --- KAYDIRMA SİSTEMİ BİTİŞ ---
 // MODAL
 function updPrev(){
   const sell=parseFloat(document.getElementById('ePrice').value)||0;
@@ -885,6 +818,49 @@ function render(){
 }
 
 render();
+
+// SWIPE ile sekme değiştirme
+(function(){
+  const tabOrder = ['total','teslim','price','eksik','borc','ayar'];
+  let startX = 0;
+  let startY = 0;
+
+  document.addEventListener('touchstart', e => {
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+  }, {passive: true});
+
+  document.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - startX;
+    const dy = e.changedTouches[0].clientY - startY;
+    // Yatay hareket dikey hareketten büyükse ve yeterince uzunsa
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+
+    // Müşteri sekmesindeyse sayısal index kullan
+    let currentIndex;
+    if (typeof activeTab === 'number') {
+      // Bekleyen müşteri listesi
+      const bekleyenler = customers.map((c,i)=>!c.delivered?i:-1).filter(i=>i>=0);
+      const pos = bekleyenler.indexOf(activeTab);
+      if (dx < 0) {
+        // Sola → sonraki müşteri veya total
+        if (pos < bekleyenler.length - 1) { showCust(bekleyenler[pos+1]); }
+        else { showTab('total'); }
+      } else {
+        // Sağa → önceki müşteri
+        if (pos > 0) { showCust(bekleyenler[pos-1]); }
+      }
+    } else {
+      currentIndex = tabOrder.indexOf(activeTab);
+      if (currentIndex === -1) return;
+      if (dx < 0 && currentIndex < tabOrder.length - 1) {
+        showTab(tabOrder[currentIndex + 1]);
+      } else if (dx > 0 && currentIndex > 0) {
+        showTab(tabOrder[currentIndex - 1]);
+      }
+    }
+  }, {passive: true});
+})();
 </script>
 </body>
 </html>
