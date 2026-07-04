@@ -161,7 +161,6 @@ h1{font-family:'Bebas Neue',sans-serif;font-size:2.4rem;letter-spacing:2px;color
   <div class="gbox">
     <div class="gbt">ÖZET</div>
     <div id="gwSec" style="display:none"><div class="gsec w">⏳ BEKLEYENLEr</div><div id="gwItems"></div></div>
-    <div id="gdSec" style="display:none"><div class="gsec d">✅ TESLİM EDİLENLER</div><div id="gdItems"></div></div>
     <div class="slbl" id="prodSlbl" style="display:none">ÜRÜN BAZLI ADET TOPLAMI</div>
     <div id="prodItems"></div>
     <div id="aylikSection" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid #2a2500;">
@@ -474,12 +473,15 @@ function delCust(i){
   save();render();
 }
 function togDel(ci){
-  customers[ci].delivered=!customers[ci].delivered;
-  // Teslim tarihi kaydet
-  if(customers[ci].delivered){
-    customers[ci].teslimAy=new Date().toISOString().slice(0,7);
+  const c=customers[ci];
+  if(!c.delivered){
+    // Teslim edildi - tarihi kaydet
+    c.teslimAy=new Date().toISOString().slice(0,7);
+    c.delivered=true;
   } else {
-    customers[ci].teslimAy=null;
+    // Geri alındı - teslimAy sıfırla ama ay bilgisini koru (düşürme için)
+    c.teslimAy=null;
+    c.delivered=false;
   }
   save();render();
 }
@@ -821,16 +823,11 @@ function render(){
   // TOPLAM
   if(activeTab==='total'){
     const wait=customers.filter(c=>!c.delivered&&ct(customers.indexOf(c))>0);
-    const done=customers.filter(c=>c.delivered);
-    const gws=document.getElementById('gwSec'),gds=document.getElementById('gdSec');
+    const gws=document.getElementById('gwSec');
     if(wait.length>0){
       gws.style.display='block';
-      document.getElementById('gwItems').innerHTML=wait.map(c=>{const ci=customers.indexOf(c);return`<div class="gci"><span>${c.name}</span><span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px"><span style="color:var(--accent);font-weight:600">${ct(ci)} €</span><span class="gp">💰 ${cpr(ci).toFixed(0)} €</span></span></div>`;}).join('');
+      document.getElementById('gwItems').innerHTML=wait.map(c=>{const ci=customers.indexOf(c);return`<div class="gci"><span>${c.name}</span><span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px"><span style="color:var(--accent);font-weight:600">${ct(ci)} €</span></span></div>`;}).join('');
     }else gws.style.display='none';
-    if(done.length>0){
-      gds.style.display='block';
-      document.getElementById('gdItems').innerHTML=done.map(c=>{const ci=customers.indexOf(c);return`<div class="gci"><span>✅ ${c.name}</span><span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px"><span style="color:var(--green);font-weight:600">${ct(ci)} €</span><span class="gp">💰 ${cpr(ci).toFixed(0)} €</span></span></div>`;}).join('');
-    }else gds.style.display='none';
     // Sadece teslim edilmemiş müşterilerin ürün toplamları
     const bekleyenMusteriler=customers.filter(c=>!c.delivered);
     const pt=products.map((p,pi)=>({name:p.name,price:p.price,buyPrice:p.buyPrice||0,cnt:bekleyenMusteriler.reduce((s,c)=>s+c.counts[pi],0)})).filter(x=>x.cnt>0);
@@ -839,17 +836,18 @@ function render(){
       psl.style.display='block';
       gpi.innerHTML=`<div style="font-size:0.75rem;color:var(--orange);margin-bottom:8px;">⏳ Sadece bekleyen siparişler</div>`+pt.map(x=>{const pr=(x.price-x.buyPrice)*x.cnt;return`<div class="pti"><div class="ptil"><span class="ptin">${x.name}</span><span class="ptis">${x.price}€${x.buyPrice>0?' · '+x.buyPrice+'€ alış':''}</span></div><div class="ptir"><span class="abadge">${x.cnt} ADET</span><span class="ttext">${(x.price*x.cnt).toFixed(0)} €</span>${x.buyPrice>0?`<span class="prtext">💰 ${pr.toFixed(0)} €</span>`:''}</div></div>`;}).join('');
     }else{psl.style.display='none';gpi.innerHTML='';}
-    document.getElementById('gTotal').textContent=customers.reduce((s,_,ci)=>s+ct(ci),0).toFixed(0)+' €';
-    document.getElementById('gProfit').textContent=customers.reduce((s,_,ci)=>s+cpr(ci),0).toFixed(0)+' €';
+    // Sadece bekleyen müşterilerin toplamı
+    const bekleyenTop=customers.filter(c=>!c.delivered);
+    document.getElementById('gTotal').textContent=bekleyenTop.reduce((s,c)=>{const ci=customers.indexOf(c);return s+ct(ci);},0).toFixed(0)+' €';
+    document.getElementById('gProfit').textContent=bekleyenTop.reduce((s,c)=>{const ci=customers.indexOf(c);return s+cpr(ci);},0).toFixed(0)+' €';
 
-    // AYLİK İSTATİSTİK - teslim edilmiş müşterilerden hesapla
+    // AYLİK İSTATİSTİK - bu ay teslim edilmiş müşterilerden hesapla
     const buAy=new Date().toISOString().slice(0,7);
     const buAyMusteriler=customers.filter(c=>c.delivered&&c.teslimAy===buAy);
     const aylikSec=document.getElementById('aylikSection');
     if(buAyMusteriler.length>0){
-      // Ürün bazlı topla
       const urunler={};
-      let toplamCiro=0, toplamKar=0;
+      let toplamCiro=0,toplamKar=0;
       buAyMusteriler.forEach(c=>{
         const ci=customers.indexOf(c);
         products.forEach((p,pi)=>{
@@ -863,7 +861,7 @@ function render(){
       });
       aylikSec.style.display='block';
       const ayAd=new Date().toLocaleDateString('tr-TR',{month:'long',year:'numeric'});
-      document.getElementById('aylikBaslik').textContent=ayAd.toUpperCase()+' İSTATİSTİĞİ';
+      document.getElementById('aylikBaslik').textContent=ayAd.toUpperCase()+' — '+buAyMusteriler.length+' TESLİMAT';
       document.getElementById('aylikItems').innerHTML=Object.entries(urunler)
         .sort((a,b)=>b[1]-a[1])
         .map(([k,v])=>`<div class="pti"><div class="ptil"><span class="ptin">${k}</span></div><div class="ptir"><span class="abadge">${v} ADET</span></div></div>`).join('');
