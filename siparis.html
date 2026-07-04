@@ -475,35 +475,58 @@ function delCust(i){
 }
 function togDel(ci){
   const c=customers[ci];
+  const ay=new Date().toISOString().slice(0,7);
+
   if(!c.delivered){
-    // Teslim edildi — aylık istatistiğe ekle
-    const ay=new Date().toISOString().slice(0,7); // YYYY-MM
+    // Teslim edildi — önce eski kaydı temizle, sonra yeniden ekle
     let ayRec=aylik.find(a=>a.ay===ay);
     if(!ayRec){ayRec={ay,urunler:{},ciro:0,kar:0};aylik.push(ayRec);}
+
+    // Eğer daha önce bu müşteri kaydedildiyse önce sil
+    if(c.aylikKey){
+      const eskiRec=aylik.find(a=>a.ay===c.aylikKey.ay);
+      if(eskiRec){
+        c.aylikKey.urunler.forEach(({key,adet,ciro,kar})=>{
+          eskiRec.urunler[key]=(eskiRec.urunler[key]||0)-adet;
+          if(eskiRec.urunler[key]<=0)delete eskiRec.urunler[key];
+          eskiRec.ciro-=ciro;
+          eskiRec.kar-=kar;
+        });
+      }
+    }
+
+    // Şimdi yeni ekle
+    const kayit=[];
     products.forEach((p,pi)=>{
       if(c.counts[pi]>0){
         const key=p.name+(p.size?' '+p.size:'');
-        ayRec.urunler[key]=(ayRec.urunler[key]||0)+c.counts[pi];
-        ayRec.ciro+=sp(ci,pi)*c.counts[pi];
-        ayRec.kar+=(sp(ci,pi)-bp(pi))*c.counts[pi];
+        const adet=c.counts[pi];
+        const ciro=sp(ci,pi)*adet;
+        const kar=(sp(ci,pi)-bp(pi))*adet;
+        ayRec.urunler[key]=(ayRec.urunler[key]||0)+adet;
+        ayRec.ciro+=ciro;
+        ayRec.kar+=kar;
+        kayit.push({key,adet,ciro,kar});
       }
     });
+    c.aylikKey={ay,urunler:kayit};
+
   } else {
     // Geri alındı — aylık istatistikten çıkar
-    const ay=new Date().toISOString().slice(0,7);
-    const ayRec=aylik.find(a=>a.ay===ay);
-    if(ayRec){
-      products.forEach((p,pi)=>{
-        if(c.counts[pi]>0){
-          const key=p.name+(p.size?' '+p.size:'');
-          ayRec.urunler[key]=(ayRec.urunler[key]||0)-c.counts[pi];
-          if(ayRec.urunler[key]<=0)delete ayRec.urunler[key];
-          ayRec.ciro-=sp(ci,pi)*c.counts[pi];
-          ayRec.kar-=(sp(ci,pi)-bp(pi))*c.counts[pi];
-        }
-      });
+    if(c.aylikKey){
+      const eskiRec=aylik.find(a=>a.ay===c.aylikKey.ay);
+      if(eskiRec){
+        c.aylikKey.urunler.forEach(({key,adet,ciro,kar})=>{
+          eskiRec.urunler[key]=(eskiRec.urunler[key]||0)-adet;
+          if(eskiRec.urunler[key]<=0)delete eskiRec.urunler[key];
+          eskiRec.ciro-=ciro;
+          eskiRec.kar-=kar;
+        });
+      }
+      c.aylikKey=null;
     }
   }
+
   c.delivered=!c.delivered;
   save();render();
 }
