@@ -161,7 +161,6 @@ h1{font-family:'Bebas Neue',sans-serif;font-size:2.4rem;letter-spacing:2px;color
   <div class="gbox">
     <div class="gbt">ÖZET</div>
     <div id="gwSec" style="display:none"><div class="gsec w">⏳ BEKLEYENLEr</div><div id="gwItems"></div></div>
-    <div id="gdSec" style="display:none"><div class="gsec d">✅ TESLİM EDİLENLER</div><div id="gdItems"></div></div>
     <div class="slbl" id="prodSlbl" style="display:none">ÜRÜN BAZLI ADET TOPLAMI</div>
     <div id="prodItems"></div>
     <div id="aylikSection" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid #2a2500;">
@@ -310,27 +309,27 @@ h1{font-family:'Bebas Neue',sans-serif;font-size:2.4rem;letter-spacing:2px;color
 <script>
 const DEF=[
   {name:"Erikli",size:"0.5L",price:4.5,buyPrice:2.7},
-  {name:"Erikli",size:"1.5L",price:0,buyPrice:0},
-  {name:"Coca Cola",size:"0.33L",price:14,buyPrice:0},
-  {name:"Cola Zero",size:"0.33L",price:14,buyPrice:0},
-  {name:"Cola Vanilla",size:"0.33L",price:14,buyPrice:0},
+  {name:"Erikli",size:"1.5L",price:4.5,buyPrice:2.7},
+  {name:"Coca Cola",size:"0.33L",price:14,buyPrice:11},
+  {name:"Cola Zero",size:"0.33L",price:14,buyPrice:11},
+  {name:"Cola Vanilla",size:"0.33L",price:14,buyPrice:11},
   {name:"Cola Cherry",size:"0.33L",price:14,buyPrice:0},
-  {name:"Fanta Exotic",size:"0.33L",price:14,buyPrice:0},
-  {name:"Fanta Orange",size:"0.33L",price:14,buyPrice:0},
-  {name:"Fanta Orange Zero",size:"0.33L",price:14,buyPrice:0},
-  {name:"Fanta Lemon",size:"0.33L",price:14,buyPrice:0},
-  {name:"Fuzetea (Pfirsich)",size:"0.33L",price:14,buyPrice:0},
-  {name:"Sprite",size:"0.33L",price:14,buyPrice:0},
-  {name:"Pepsi Cola",size:"0.33L",price:14,buyPrice:0},
-  {name:"Pepsi Max Zero",size:"0.33L",price:14,buyPrice:0},
+  {name:"Fanta Exotic",size:"0.33L",price:14,buyPrice:11},
+  {name:"Fanta Orange",size:"0.33L",price:14,buyPrice:11},
+  {name:"Fanta Orange Zero",size:"0.33L",price:14,buyPrice:11},
+  {name:"Fanta Lemon",size:"0.33L",price:14,buyPrice:11},
+  {name:"Fuzetea (Pfirsich)",size:"0.33L",price:14,buyPrice:11},
+  {name:"Sprite",size:"0.33L",price:14,buyPrice:11},
+  {name:"Pepsi Cola",size:"0.33L",price:14,buyPrice:11},
+  {name:"Pepsi Max Zero",size:"0.33L",price:14,buyPrice:11},
   {name:"Mirinda Orange",size:"0.33L",price:14,buyPrice:0},
   {name:"Mirinda Zero",size:"0.33L",price:14,buyPrice:0},
   {name:"Redbull",size:"0.25L",price:25,buyPrice:24},
   {name:"28 Black",size:"0.25L",price:24,buyPrice:17},
-  {name:"X Energy",size:"0.25L",price:0,buyPrice:0},
-  {name:"Kizilay Sade Soda",size:"",price:0,buyPrice:0},
-  {name:"Kizilay Limon",size:"",price:0,buyPrice:0},
-  {name:"Ayran",size:"",price:0,buyPrice:0},
+  {name:"X Energy",size:"0.25L",price:14,buyPrice:10},
+  {name:"Kizilay Sade Soda",size:"",price:12,buyPrice:8},
+  {name:"Kizilay Limon",size:"",price:12,buyPrice:9},
+  {name:"Ayran",size:"",price:10,buyPrice:8},
   {name:"Durstloescher Eistea",size:"",price:0,buyPrice:0},
   {name:"Durstloescher Zitrone",size:"",price:0,buyPrice:0},
   {name:"Durstloescher Multi",size:"",price:0,buyPrice:0},
@@ -339,9 +338,6 @@ const DEF=[
   {name:"Capri Sonne Orange",size:"",price:0,buyPrice:0},
   {name:"Capri Sonne Kirsche",size:"",price:0,buyPrice:0},
   {name:"Capri Sonne Safari",size:"",price:0,buyPrice:0},
-  {name:"Mila Wasser",size:"0.5L",price:9,buyPrice:5},
-  {name:"Diger",size:"0.33L",price:16,buyPrice:13},
-  {name:"Mila1,5",size:"1.5L",price:4.5,buyPrice:2.5},
 ];
 
 let products=[],customers=[],alArr=[],notlar=[],borclar=[],aylik=[],activeTab='total',gizliMod=true;
@@ -479,35 +475,14 @@ function delCust(i){
 function togDel(ci){
   const c=customers[ci];
   if(!c.delivered){
-    // Teslim edildi — aylık istatistiğe ekle
-    const ay=new Date().toISOString().slice(0,7); // YYYY-MM
-    let ayRec=aylik.find(a=>a.ay===ay);
-    if(!ayRec){ayRec={ay,urunler:{},ciro:0,kar:0};aylik.push(ayRec);}
-    products.forEach((p,pi)=>{
-      if(c.counts[pi]>0){
-        const key=p.name+(p.size?' '+p.size:'');
-        ayRec.urunler[key]=(ayRec.urunler[key]||0)+c.counts[pi];
-        ayRec.ciro+=sp(ci,pi)*c.counts[pi];
-        ayRec.kar+=(sp(ci,pi)-bp(pi))*c.counts[pi];
-      }
-    });
+    // Teslim edildi - tarihi kaydet
+    c.teslimAy=new Date().toISOString().slice(0,7);
+    c.delivered=true;
   } else {
-    // Geri alındı — aylık istatistikten çıkar
-    const ay=new Date().toISOString().slice(0,7);
-    const ayRec=aylik.find(a=>a.ay===ay);
-    if(ayRec){
-      products.forEach((p,pi)=>{
-        if(c.counts[pi]>0){
-          const key=p.name+(p.size?' '+p.size:'');
-          ayRec.urunler[key]=(ayRec.urunler[key]||0)-c.counts[pi];
-          if(ayRec.urunler[key]<=0)delete ayRec.urunler[key];
-          ayRec.ciro-=sp(ci,pi)*c.counts[pi];
-          ayRec.kar-=(sp(ci,pi)-bp(pi))*c.counts[pi];
-        }
-      });
-    }
+    // Geri alındı - teslimAy sıfırla ama ay bilgisini koru (düşürme için)
+    c.teslimAy=null;
+    c.delivered=false;
   }
-  c.delivered=!c.delivered;
   save();render();
 }
 function movCust(f,t){
@@ -848,16 +823,11 @@ function render(){
   // TOPLAM
   if(activeTab==='total'){
     const wait=customers.filter(c=>!c.delivered&&ct(customers.indexOf(c))>0);
-    const done=customers.filter(c=>c.delivered);
-    const gws=document.getElementById('gwSec'),gds=document.getElementById('gdSec');
+    const gws=document.getElementById('gwSec');
     if(wait.length>0){
       gws.style.display='block';
-      document.getElementById('gwItems').innerHTML=wait.map(c=>{const ci=customers.indexOf(c);return`<div class="gci"><span>${c.name}</span><span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px"><span style="color:var(--accent);font-weight:600">${ct(ci)} €</span><span class="gp">💰 ${cpr(ci).toFixed(0)} €</span></span></div>`;}).join('');
+      document.getElementById('gwItems').innerHTML=wait.map(c=>{const ci=customers.indexOf(c);return`<div class="gci"><span>${c.name}</span><span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px"><span style="color:var(--accent);font-weight:600">${ct(ci)} €</span></span></div>`;}).join('');
     }else gws.style.display='none';
-    if(done.length>0){
-      gds.style.display='block';
-      document.getElementById('gdItems').innerHTML=done.map(c=>{const ci=customers.indexOf(c);return`<div class="gci"><span>✅ ${c.name}</span><span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px"><span style="color:var(--green);font-weight:600">${ct(ci)} €</span><span class="gp">💰 ${cpr(ci).toFixed(0)} €</span></span></div>`;}).join('');
-    }else gds.style.display='none';
     // Sadece teslim edilmemiş müşterilerin ürün toplamları
     const bekleyenMusteriler=customers.filter(c=>!c.delivered);
     const pt=products.map((p,pi)=>({name:p.name,price:p.price,buyPrice:p.buyPrice||0,cnt:bekleyenMusteriler.reduce((s,c)=>s+c.counts[pi],0)})).filter(x=>x.cnt>0);
@@ -866,22 +836,37 @@ function render(){
       psl.style.display='block';
       gpi.innerHTML=`<div style="font-size:0.75rem;color:var(--orange);margin-bottom:8px;">⏳ Sadece bekleyen siparişler</div>`+pt.map(x=>{const pr=(x.price-x.buyPrice)*x.cnt;return`<div class="pti"><div class="ptil"><span class="ptin">${x.name}</span><span class="ptis">${x.price}€${x.buyPrice>0?' · '+x.buyPrice+'€ alış':''}</span></div><div class="ptir"><span class="abadge">${x.cnt} ADET</span><span class="ttext">${(x.price*x.cnt).toFixed(0)} €</span>${x.buyPrice>0?`<span class="prtext">💰 ${pr.toFixed(0)} €</span>`:''}</div></div>`;}).join('');
     }else{psl.style.display='none';gpi.innerHTML='';}
-    document.getElementById('gTotal').textContent=customers.reduce((s,_,ci)=>s+ct(ci),0).toFixed(0)+' €';
-    document.getElementById('gProfit').textContent=customers.reduce((s,_,ci)=>s+cpr(ci),0).toFixed(0)+' €';
+    // Sadece bekleyen müşterilerin toplamı
+    const bekleyenTop=customers.filter(c=>!c.delivered);
+    document.getElementById('gTotal').textContent=bekleyenTop.reduce((s,c)=>{const ci=customers.indexOf(c);return s+ct(ci);},0).toFixed(0)+' €';
+    document.getElementById('gProfit').textContent=bekleyenTop.reduce((s,c)=>{const ci=customers.indexOf(c);return s+cpr(ci);},0).toFixed(0)+' €';
 
-    // AYLİK İSTATİSTİK
+    // AYLİK İSTATİSTİK - bu ay teslim edilmiş müşterilerden hesapla
     const buAy=new Date().toISOString().slice(0,7);
-    const ayRec=aylik.find(a=>a.ay===buAy);
+    const buAyMusteriler=customers.filter(c=>c.delivered&&c.teslimAy===buAy);
     const aylikSec=document.getElementById('aylikSection');
-    if(ayRec&&Object.keys(ayRec.urunler).length>0){
+    if(buAyMusteriler.length>0){
+      const urunler={};
+      let toplamCiro=0,toplamKar=0;
+      buAyMusteriler.forEach(c=>{
+        const ci=customers.indexOf(c);
+        products.forEach((p,pi)=>{
+          if(c.counts[pi]>0){
+            const key=p.name+(p.size?' '+p.size:'');
+            urunler[key]=(urunler[key]||0)+c.counts[pi];
+            toplamCiro+=sp(ci,pi)*c.counts[pi];
+            toplamKar+=(sp(ci,pi)-bp(pi))*c.counts[pi];
+          }
+        });
+      });
       aylikSec.style.display='block';
       const ayAd=new Date().toLocaleDateString('tr-TR',{month:'long',year:'numeric'});
-      document.getElementById('aylikBaslik').textContent=ayAd.toUpperCase()+' İSTATİSTİĞİ';
-      document.getElementById('aylikItems').innerHTML=Object.entries(ayRec.urunler)
+      document.getElementById('aylikBaslik').textContent=ayAd.toUpperCase()+' — '+buAyMusteriler.length+' TESLİMAT';
+      document.getElementById('aylikItems').innerHTML=Object.entries(urunler)
         .sort((a,b)=>b[1]-a[1])
         .map(([k,v])=>`<div class="pti"><div class="ptil"><span class="ptin">${k}</span></div><div class="ptir"><span class="abadge">${v} ADET</span></div></div>`).join('');
-      document.getElementById('aylikCiro').textContent=ayRec.ciro.toFixed(0)+' €';
-      document.getElementById('aylikKar').textContent=ayRec.kar.toFixed(0)+' €';
+      document.getElementById('aylikCiro').textContent=toplamCiro.toFixed(0)+' €';
+      document.getElementById('aylikKar').textContent=toplamKar.toFixed(0)+' €';
     } else {
       aylikSec.style.display='none';
     }
